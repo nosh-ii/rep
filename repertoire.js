@@ -1,9 +1,9 @@
 const repertoire = [
     {
         instrument: "Clarinet",
-        name: "1st Movement from Concerto for Clarinet in A Major, K. 622",
+        name: "Allegro from Concerto for Clarinet in A Major, K. 622",
         composer: "W. A. Mozart",
-        part: ""
+        part: "https://raw.githubusercontent.com/nosh-ii/rep/main/parts/clarinet/Allegro%20K622.pdf"
     },
 
     {
