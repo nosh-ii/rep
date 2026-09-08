@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Audition repertoire database.">
+  <title>rep. — audition repertoire</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./">rep.</a>
+
+      <nav class="nav" aria-label="Main navigation">
+        <button id="allButton" class="active" type="button">repertoire</button>
+        <button id="favoritesButton" type="button">favorites</button>
+        <button id="resetButton" type="button">reset</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">audition repertoire database</p>
+      <h1>find your next piece.</h1>
+      <p class="hero-copy">
+        A searchable collection of audition repertoire, excerpts, and parts.
+        Start with clarinet and expand from there.
+      </p>
+
+      <label for="search" class="sr-only">Search repertoire</label>
+      <input
+        id="search"
+        class="search"
+        type="search"
+        placeholder="Search by piece, composer, or instrument..."
+        autocomplete="off"
+      >
+    </section>
+
+    <section aria-label="Filters">
+      <div class="filters">
+        <select id="instrument" class="filter" aria-label="Instrument">
+          <option value="">All instruments</option>
+          <option value="clarinet">Clarinet</option>
+          <option value="oboe">Oboe</option>
+          <option value="flute">Flute</option>
+          <option value="trumpet">Trumpet</option>
+          <option value="trombone">Trombone</option>
+          <option value="percussion">Percussion</option>
+          <option value="violin">Violin</option>
+          <option value="cello">Cello</option>
+          <option value="piano">Piano</option>
+          <option value="brass">Brass</option>
+        </select>
+
+        <select id="era" class="filter" aria-label="Era">
+          <option value="">All eras</option>
+          <option value="baroque">Baroque</option>
+          <option value="classical">Classical</option>
+          <option value="romantic">Romantic</option>
+          <option value="20th century">20th Century</option>
+          <option value="21st century">21st Century</option>
+        </select>
+
+        <select id="difficulty" class="filter" aria-label="Difficulty">
+          <option value="">All difficulties</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+          <option value="very advanced">Very Advanced</option>
+        </select>
+
+        <select id="duration" class="filter" aria-label="Duration">
+          <option value="">Any duration</option>
+          <option value="short">Under 10 min</option>
+          <option value="medium">10–20 min</option>
+          <option value="long">Over 20 min</option>
+        </select>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2 id="sectionTitle">repertoire</h2>
+        <span id="count" class="count">0 works</span>
+      </div>
+
+      <div id="repertoireGrid" class="grid"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="topbar-inner">
+      <span>rep. — audition repertoire</span>
+      <span>static · GitHub Pages ready</span>
+    </div>
+  </footer>
+
+  <script src="./repertoire.js"></script>
+
+  <script>
+    const grid = document.getElementById("repertoireGrid");
+    const search = document.getElementById("search");
+    const instrument = document.getElementById("instrument");
+    const era = document.getElementById("era");
+    const difficulty = document.getElementById("difficulty");
+    const duration = document.getElementById("duration");
+    const count = document.getElementById("count");
+    const sectionTitle = document.getElementById("sectionTitle");
+    const allButton = document.getElementById("allButton");
+    const favoritesButton = document.getElementById("favoritesButton");
+    const resetButton = document.getElementById("resetButton");
+
+    let favoritesOnly = false;
+
+    function getFavorites() {
+      try {
+        return JSON.parse(localStorage.getItem("rep-favorites") || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function setFavorites(ids) {
+      localStorage.setItem("rep-favorites", JSON.stringify(ids));
+    }
+
+    function pieceId(piece, index) {
+      return `${piece.instrument}-${piece.name}-${piece.composer}-${index}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-");
+    }
+
+    function durationMatches(value, selected) {
+      if (!selected || !value) return true;
+
+      const minutes = Number.parseInt(String(value).replace(/[^0-9]/g, ""), 10);
+      if (Number.isNaN(minutes)) return true;
+
+      if (selected === "short") return minutes < 10;
+      if (selected === "medium") return minutes >= 10 && minutes <= 20;
+      if (selected === "long") return minutes > 20;
+
+      return true;
+    }
+
+    function render() {
+      const query = search.value.trim().toLowerCase();
+      const selectedInstrument = instrument.value.toLowerCase();
+      const selectedEra = era.value.toLowerCase();
+      const selectedDifficulty = difficulty.value.toLowerCase();
+      const selectedDuration = duration.value.toLowerCase();
+      const favoriteIds = getFavorites();
+
+      grid.innerHTML = "";
+
+      const matches = repertoire.filter((piece, index) => {
+        const id = pieceId(piece, index);
+
+        const searchable = [
+          piece.name,
+          piece.composer,
+          piece.instrument,
+          piece.era || "",
+          piece.difficulty || ""
+        ].join(" ").toLowerCase();
+
+        const matchesSearch = !query || searchable.includes(query);
+        const matchesInstrument =
+          !selectedInstrument ||
+          piece.instrument.toLowerCase() === selectedInstrument;
+        const matchesEra =
+          !selectedEra ||
+          (piece.era || "").toLowerCase() === selectedEra;
+        const matchesDifficulty =
+          !selectedDifficulty ||
+          (piece.difficulty || "").toLowerCase() === selectedDifficulty;
+        const matchesDuration =
+          durationMatches(piece.duration, selectedDuration);
+        const matchesFavorites =
+          !favoritesOnly || favoriteIds.includes(id);
+
+        return (
+          matchesSearch &&
+          matchesInstrument &&
+          matchesEra &&
+          matchesDifficulty &&
+          matchesDuration &&
+          matchesFavorites
+        );
+      });
+
+      sectionTitle.textContent = favoritesOnly ? "favorites" : "repertoire";
+      count.textContent = `${matches.length} ${matches.length === 1 ? "work" : "works"}`;
+
+      if (!matches.length) {
+        grid.innerHTML = `
+          <div class="empty">
+            No repertoire found.
+          </div>
+        `;
+        return;
+      }
+
+      matches.forEach(piece => {
+        const originalIndex = repertoire.indexOf(piece);
+        const id = pieceId(piece, originalIndex);
+        const isFavorite = favoriteIds.includes(id);
+
+        const card = document.createElement("article");
+        card.className = "card";
+
+        card.innerHTML = `
+          <div class="card-top">
+            <span class="instrument">${escapeHtml(piece.instrument)}</span>
+            <button
+              class="favorite ${isFavorite ? "is-favorite" : ""}"
+              type="button"
+              aria-label="${isFavorite ? "Remove from favorites" : "Add to favorites"}"
+              aria-pressed="${isFavorite}"
+              data-id="${escapeHtml(id)}"
+            >${isFavorite ? "★" : "☆"}</button>
+          </div>
+
+          <h3>${escapeHtml(piece.name)}</h3>
+          <p class="composer">${escapeHtml(piece.composer)}</p>
+
+          <div class="meta">
+            ${piece.era ? `<span>${escapeHtml(piece.era)}</span>` : ""}
+            ${piece.difficulty ? `<span>${escapeHtml(piece.difficulty)}</span>` : ""}
+            ${piece.duration ? `<span>${escapeHtml(piece.duration)}</span>` : ""}
+          </div>
+
+          ${
+            piece.part
+              ? `<a
+                   class="part-link"
+                   href="${escapeAttribute(piece.part)}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                 >View clarinet part ↗</a>`
+              : `<span class="no-part">Part link coming soon</span>`
+          }
+        `;
+
+        card.querySelector(".favorite").addEventListener("click", event => {
+          event.stopPropagation();
+
+          const favorites = getFavorites();
+          const button = event.currentTarget;
+
+          if (favorites.includes(id)) {
+            setFavorites(favorites.filter(item => item !== id));
+          } else {
+            setFavorites([...favorites, id]);
+          }
+
+          render();
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
+    }
+
+    function resetFilters() {
+      search.value = "";
+      instrument.value = "";
+      era.value = "";
+      difficulty.value = "";
+      duration.value = "";
+      favoritesOnly = false;
+
+      allButton.classList.add("active");
+      favoritesButton.classList.remove("active");
+
+      render();
+    }
+
+    search.addEventListener("input", render);
+    instrument.addEventListener("change", render);
+    era.addEventListener("change", render);
+    difficulty.addEventListener("change", render);
+    duration.addEventListener("change", render);
+
+    allButton.addEventListener("click", () => {
+      favoritesOnly = false;
+      allButton.classList.add("active");
+      favoritesButton.classList.remove("active");
+      render();
+    });
+
+    favoritesButton.addEventListener("click", () => {
+      favoritesOnly = true;
+      favoritesButton.classList.add("active");
+      allButton.classList.remove("active");
+      render();
+    });
+
+    resetButton.addEventListener("click", resetFilters);
+
+    render();
+  </script>
+</body>
+</html>
